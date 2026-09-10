@@ -1,4 +1,4 @@
-name = "ExprGraphExplorer"
+name = "ComputationGraphExplorer"
 uuid = "c9fc7d07-15e8-4fd8-b152-23c2424d2de2"
 version = "0.1.0"
 authors = ["Benoît Legat <benoit.legat@gmail.com>"]

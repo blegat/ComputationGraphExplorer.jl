@@ -1,11 +1,11 @@
-# ExprGraphExplorer.jl
+# ComputationGraphExplorer.jl
 
 | **Build Status** |
 |:----------------:|
 | [![Build Status][build-img]][build-url] [![Codecov branch][codecov-img]][codecov-url] |
 
 
-`ExprGraphExplorer.jl` constructs expression graphs by operator overloading,
+`ComputationGraphExplorer.jl` constructs expression graphs by operator overloading,
 propagates primal Julia values through them, and provides step-by-step graph
 visualization. Applications attach their own metadata to every node; optional
 reverse-pass utilities route operations without prescribing an adjoint type.
@@ -27,7 +27,7 @@ julia --project=examples -e 'using Pluto; Pluto.run(notebook="examples/autodiff_
 ## Defining node metadata
 
 ```julia
-using ExprGraphExplorer
+using ComputationGraphExplorer
 
 mutable struct MyMetadata
     note::String
@@ -42,12 +42,12 @@ graph = ExprGraph(x * y; names=IdDict(x => "x", y => "y"))
 
 ## Defining reverse rules
 
-`ExprGraphExplorer.pullback!(node)` translates the operation symbol stored in a
+`ComputationGraphExplorer.pullback!(node)` translates the operation symbol stored in a
 node into ordinary Julia multiple dispatch. For example, scalar reverse-mode
 metadata can define
 
 ```julia
-function ExprGraphExplorer.pullback!(::typeof(*), output::MyNode, x::MyNode, y::MyNode)
+function ComputationGraphExplorer.pullback!(::typeof(*), output::MyNode, x::MyNode, y::MyNode)
     # Propagate output metadata to x.metadata and y.metadata.
 end
 ```
@@ -56,13 +56,13 @@ The package contains the small, explicit operation switch; applications only
 provide the propagation rules. Calling `pullback!(node)` without a matching rule
 throws a `MethodError` showing exactly which operator and node signature is
 missing. Metadata that stores a pullback or local Jacobians may instead
-specialize `ExprGraphExplorer.pullback!(node::MyNode)` and bypass the switch.
+specialize `ComputationGraphExplorer.pullback!(node::MyNode)` and bypass the switch.
 
 A complete reverse pass is provided by `backward!(output)`. Metadata defines
 how adjoints are initialized:
 
 ```julia
-function ExprGraphExplorer.seed_metadata!(data::MyMetadata, is_output::Bool)
+function ComputationGraphExplorer.seed_metadata!(data::MyMetadata, is_output::Bool)
     # Initialize the metadata, using a nonzero reverse seed iff `is_output`.
 end
 ```
@@ -74,7 +74,7 @@ Rendering and SVG, PNG, and EPS export use Luxor and its Cairo artifact. Small
 matrix values are typeset by Typstry and its Typst artifact. No separately
 installed graphics or typesetting executable is required.
 
-[build-img]: https://github.com/blegat/ExprGraphExplorer.jl/actions/workflows/ci.yml/badge.svg?branch=main
-[build-url]: https://github.com/blegat/ExprGraphExplorer.jl/actions?query=workflow%3ACI
-[codecov-img]: https://codecov.io/gh/blegat/ExprGraphExplorer.jl/branch/main/graph/badge.svg
-[codecov-url]: https://codecov.io/gh/blegat/ExprGraphExplorer.jl/branch/main
+[build-img]: https://github.com/blegat/ComputationGraphExplorer.jl/actions/workflows/ci.yml/badge.svg?branch=main
+[build-url]: https://github.com/blegat/ComputationGraphExplorer.jl/actions?query=workflow%3ACI
+[codecov-img]: https://codecov.io/gh/blegat/ComputationGraphExplorer.jl/branch/main/graph/badge.svg
+[codecov-url]: https://codecov.io/gh/blegat/ComputationGraphExplorer.jl/branch/main

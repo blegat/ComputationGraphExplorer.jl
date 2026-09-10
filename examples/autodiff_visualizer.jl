@@ -24,7 +24,7 @@ begin
 end
 
 # ╔═╡ e1084400-e25c-4f9f-bdd7-c919cdf50ad8
-using PlutoUI, ExprGraphExplorer, PlutoTeachingTools
+using PlutoUI, ComputationGraphExplorer, PlutoTeachingTools
 
 # ╔═╡ 6956a53c-58f2-4ee1-b9a5-c74678752eb5
 include("scalar_reverse.jl")
@@ -36,7 +36,7 @@ PlutoTeachingTools.ChooseDisplayMode()
 md"""
 # Expression graphs and reverse differentiation
 
-`ExprGraphExplorer` builds and displays the expression graph while propagating
+`ComputationGraphExplorer` builds and displays the expression graph while propagating
 only primal values. This notebook adds scalar reverse-mode differentiation as
 custom metadata on top of that generic graph.
 

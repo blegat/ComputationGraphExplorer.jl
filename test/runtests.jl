@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Benoît Legat
 # SPDX-License-Identifier: MIT
 
-using ExprGraphExplorer
+using ComputationGraphExplorer
 using LinearAlgebra
 using Test
 
@@ -27,12 +27,12 @@ EmptyMetadata(::Any) = EmptyMetadata()
         "width=\"1100\" height=\"620\"",
         render_svg(graph, states[end]; responsive = false),
     )
-    @test ExprGraphExplorer._fmt([1.0, 2.0]) == "[1, 2]"
-    @test ExprGraphExplorer._fmt([1.0 2.0; 3.0 4.0]) == "[1 2; 3 4]"
+    @test ComputationGraphExplorer._fmt([1.0, 2.0]) == "[1, 2]"
+    @test ComputationGraphExplorer._fmt([1.0 2.0; 3.0 4.0]) == "[1 2; 3 4]"
 
     # Graph construction is independent of reverse-mode metadata. If no rule
     # was provided for an operation, reverse dispatch reports its exact method.
-    @test_throws MethodError ExprGraphExplorer.pullback!(x + y)
+    @test_throws MethodError ComputationGraphExplorer.pullback!(x + y)
 end
 
 @testset "small array value union" begin

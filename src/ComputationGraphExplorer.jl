@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Benoît Legat
 # SPDX-License-Identifier: MIT
 
-module ExprGraphExplorer
+module ComputationGraphExplorer
 
 import LinearAlgebra
 import Luxor

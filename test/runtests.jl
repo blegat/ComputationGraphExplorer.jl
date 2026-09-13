@@ -25,11 +25,7 @@ function ComputationGraphExplorer.seed_metadata!(data::DispatchMetadata, is_outp
     return data
 end
 
-function ComputationGraphExplorer.pullback!(
-    op,
-    output::DispatchNode,
-    ::DispatchNode...,
-)
+function ComputationGraphExplorer.pullback!(op, output::DispatchNode, ::DispatchNode...)
     push!(output.metadata.calls, op)
     return output
 end
@@ -108,9 +104,9 @@ end
     @test ndims(a) == 2
     @test eltype(a) == Float64
     @test sum(a).value == 10
-    @test sum(a; dims=1).value == [4.0 6.0]
+    @test sum(a; dims = 1).value == [4.0 6.0]
     @test maximum(a).value == 4
-    @test maximum(a; dims=(2,)).value == [2.0; 4.0;;]
+    @test maximum(a; dims = (2,)).value == [2.0; 4.0;;]
     @test a'.value == a.value'
     @test a[[2], :].value == a.value[[2], :]
     @test reduce(hcat, [x, y]).value == [4.0 2.0]
@@ -135,33 +131,36 @@ end
     x, y = DispatchNode(4.0), DispatchNode(2.0)
     array = DispatchNode([1.0 2.0; 3.0 4.0])
     nodes = Any[
-        DispatchNode(:+, DispatchNode[x], 4.0) => +,
-        x + y => +,
-        -x => -,
-        x - y => -,
-        DispatchNode(:*, DispatchNode[x], 4.0) => *,
-        x * y => *,
-        x / y => /,
-        x^y => ^,
-        tanh(x) => tanh,
-        exp(x) => exp,
-        log(x) => log,
-        sqrt(x) => sqrt,
-        sum(array) => sum,
-        sum(array; dims=1) => sum,
-        maximum(array) => maximum,
-        maximum(array; dims=1) => maximum,
-        array' => adjoint,
-        reduce(hcat, [x, y]) => hcat,
-        array[[1], :] => getindex,
+        DispatchNode(:+, DispatchNode[x], 4.0)=>+,
+        x+y=>+,
+        -x=>-,
+        x-y=>-,
+        DispatchNode(:*, DispatchNode[x], 4.0)=>*,
+        x*y=>*,
+        x/y=>/,
+        x^y=>^,
+        tanh(x)=>tanh,
+        exp(x)=>exp,
+        log(x)=>log,
+        sqrt(x)=>sqrt,
+        sum(array)=>sum,
+        sum(array; dims = 1)=>sum,
+        maximum(array)=>maximum,
+        maximum(array; dims = 1)=>maximum,
+        array'=>adjoint,
+        reduce(hcat, [x, y])=>hcat,
+        array[[1], :]=>getindex,
     ]
     for op in (+, -, *, /, ^, tanh, exp, log, sqrt, min, max)
-        node = op in (tanh, exp, log, sqrt) ?
-               Base.broadcasted(op, array) : Base.broadcasted(op, array, array)
+        node =
+            op in (tanh, exp, log, sqrt) ? Base.broadcasted(op, array) :
+            Base.broadcasted(op, array, array)
         push!(nodes, node => (:broadcasted, op))
     end
-    push!(nodes, DispatchNode(:custom_operation, DispatchNode[x], x.value) =>
-                 Val(:custom_operation))
+    push!(
+        nodes,
+        DispatchNode(:custom_operation, DispatchNode[x], x.value) => Val(:custom_operation),
+    )
 
     for (node, expected) in nodes
         pullback!(node)
@@ -193,14 +192,14 @@ end
     x = DispatchNode([1.0, 2.0])
     y = DispatchNode([3.0, 4.0])
     output = reduce(hcat, [x, y])
-    graph = ExprGraph(output; names=IdDict(x => "x", y => "y", output => "A"))
-    frame = capture_frame(graph, "Array graph"; active=output)
+    graph = ExprGraph(output; names = IdDict(x => "x", y => "y", output => "A"))
+    frame = capture_frame(graph, "Array graph"; active = output)
 
-    svg = render_svg(graph, frame; exam=true)
+    svg = render_svg(graph, frame; exam = true)
     @test occursin("viewBox=\"0 0 1100 260\"", svg)
     @test all(!isempty, values(frame.metadata))
-    @test render_svg(graph, frame; responsive=false) isa String
-    no_metadata = capture_frame(graph, "No metadata"; show_metadata=false)
+    @test render_svg(graph, frame; responsive = false) isa String
+    no_metadata = capture_frame(graph, "No metadata"; show_metadata = false)
     @test all(isempty, values(no_metadata.metadata))
     @test render_svg(graph, no_metadata) isa String
 
@@ -210,8 +209,8 @@ end
         png_path = joinpath(directory, "graph.png")
         eps_path = joinpath(directory, "graph.eps")
         @test save_svg(svg_path, graph, frame) == svg_path
-        @test save_svg(responsive_path, graph, frame; responsive=true) == responsive_path
-        @test save_png(png_path, graph, frame; density=72, width=550) == png_path
+        @test save_svg(responsive_path, graph, frame; responsive = true) == responsive_path
+        @test save_png(png_path, graph, frame; density = 72, width = 550) == png_path
         @test save_eps(eps_path, graph, frame) == eps_path
         @test all(isfile, (svg_path, responsive_path, png_path, eps_path))
         @test occursin("width=\"100%\"", read(responsive_path, String))

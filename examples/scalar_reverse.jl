@@ -10,7 +10,8 @@ export ScalarReverseData, ScalarNode, example, frames, backward!
 mutable struct ScalarReverseData
     derivative::Float64
 end
-ComputationGraphExplorer.metadata(::Type{ScalarReverseData}, ::Float64) = ScalarReverseData(0.0)
+ComputationGraphExplorer.metadata(::Type{ScalarReverseData}, ::Float64) =
+    ScalarReverseData(0.0)
 
 function ComputationGraphExplorer.metadata_rows(data::ScalarReverseData)
     value = iszero(data.derivative) ? "0" : string(data.derivative)
@@ -33,7 +34,11 @@ function example(; x = 2.0, y = 3.0)
     return ExprGraph(output; names)
 end
 
-function ComputationGraphExplorer.pullback!(::typeof(+), node::ScalarNode, args::ScalarNode...)
+function ComputationGraphExplorer.pullback!(
+    ::typeof(+),
+    node::ScalarNode,
+    args::ScalarNode...,
+)
     for arg in args
         arg.metadata.derivative += node.metadata.derivative
     end

@@ -25,7 +25,7 @@ function forward_frames(graph::ExprGraph)
     order = topological_order(graph.output)
     result = Frame[]
     visible = Set{eltype(order)}()
-    push!(result, capture_frame(graph, "Expression graph"; visible, show_metadata = false))
+    push!(result, capture_frame(graph, "Computation graph"; visible, show_metadata = false))
     for node in order
         push!(visible, node)
         push!(
@@ -275,4 +275,55 @@ end
 function save_eps(path, graph::ExprGraph, frame::Frame; kwargs...)
     _render(graph, frame, :eps; path, kwargs...)
     return path
+end
+
+function _show_node(io::IO, node::Node, seen, prefix, is_last)
+    print(io, prefix, is_last ? "└─ " : "├─ ")
+    if haskey(seen, node)
+        return print(io, "↩ [", seen[node], "]")
+    end
+
+    identifier = length(seen) + 1
+    seen[node] = identifier
+    operation = isnothing(node.op) ? "input" : string(node.op)
+    print(io, '[', identifier, "] ", operation, ": value = ")
+    compact_io = IOContext(io, :compact => true, :limit => true)
+    show(compact_io, node.value)
+    print(io, ", derivative = ")
+    show(compact_io, node.metadata.derivative)
+
+    child_prefix = prefix * (is_last ? "   " : "│  ")
+    for (index, child) in enumerate(node.args)
+        println(io)
+        _show_node(io, child, seen, child_prefix, index == length(node.args))
+    end
+    return
+end
+
+function Base.show(io::IO, node::Node)
+    order = ComputationGraphExplorer.topological_order(node)
+    count = length(order)
+    print(io, "Computation graph with $count node", count == 1 ? "" : "s", ':')
+    println(io)
+    return _show_node(io, node, IdDict{Node,Int}(), get(io, :offset, ""), true)
+end
+
+struct GraphVisualization
+    output::Node
+end
+
+"""Wrap a computation graph for graphical display in environments such as VS Code."""
+visualize(node::Node) = GraphVisualization(node)
+
+function Base.show(io::IO, visualization::GraphVisualization)
+    count = length(ComputationGraphExplorer.topological_order(visualization.output))
+    return print(io, "Visualization of a computation graph with $count nodes")
+end
+
+function Base.show(io::IO, ::MIME"image/svg+xml", visualization::GraphVisualization)
+    graph = ComputationGraphExplorer.ExprGraph(visualization.output)
+    frame = ComputationGraphExplorer.capture_frame(graph, "Expression graph")
+    # A percentage-sized root has no useful intrinsic size when VS Code embeds
+    # the SVG as an image, so use the fixed 1100 × 620 canvas in the plot pane.
+    return print(io, ComputationGraphExplorer.render_svg(graph, frame; responsive=false))
 end

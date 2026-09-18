@@ -47,17 +47,37 @@ end
     output = s1 * (s1 + x)
     @test output.value == 48
     @test length(topological_order(output)) == 5
+    text = sprint(show, output)
+    @test startswith(text, "Computation graph with 5 nodes:")
+    @test count("[2] *: value = 6.0", text) == 1
+    @test occursin("↩ [2]", text)
+    @test occursin("↩ [3]", text)
+    @test !showable(MIME"image/svg+xml"(), output)
+
+    visualization = visualize(output)
+    @test sprint(show, visualization) ==
+          "Visualization of a computation graph with 5 nodes"
+    @test showable(MIME"image/svg+xml"(), visualization)
+    visualization_svg = repr(MIME"image/svg+xml"(), visualization)
+    @test occursin("width=\"1100\" height=\"620\"", visualization_svg)
+    @test !occursin("width=\"100%\"", visualization_svg)
+    custom_svg = repr(
+        MIME"image/svg+xml"(),
+        visualize(output; width = 700, height = 400, responsive = true),
+    )
+    @test occursin("width=\"100%\"", custom_svg)
+    @test occursin("viewBox=\"0 0 700 400\"", custom_svg)
+
     graph = ExprGraph(output; names = IdDict(x => "x", y => "y"))
     states = forward_frames(graph)
     @test length(states) == 6
     svg = render_svg(graph, states[end])
     @test occursin("<svg", svg)
     @test occursin("xmlns:xlink=\"http://www.w3.org/1999/xlink\"", svg)
-    @test occursin("width=\"100%\"", svg)
-    @test occursin("viewBox=\"0 0 1100 620\"", svg)
+    @test occursin("width=\"1100\" height=\"620\"", svg)
     @test occursin(
-        "width=\"1100\" height=\"620\"",
-        render_svg(graph, states[end]; responsive = false),
+        "width=\"100%\"",
+        render_svg(graph, states[end]; responsive = true),
     )
     @test ComputationGraphExplorer._fmt([1.0, 2.0]) == "[1, 2]"
     @test ComputationGraphExplorer._fmt([1.0 2.0; 3.0 4.0]) == "[1 2; 3 4]"
@@ -121,6 +141,7 @@ end
     @test Base.broadcasted(max, 2, a).value == max.(2, a.value)
 
     @test metadata_rows(EmptyMetadata()) == Pair{String,String}[]
+    @test occursin("seeded = false", sprint(show, x))
     large_matrix = fill(1.0, 5, 5)
     array3 = reshape(1:8, 2, 2, 2)
     @test ComputationGraphExplorer._fmt(large_matrix) == summary(large_matrix)

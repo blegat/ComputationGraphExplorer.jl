@@ -58,7 +58,7 @@ end
 @bind step Slider(eachindex(states); default = 1, show_value = true)
 
 # ╔═╡ 5b273195-e5f2-4e82-846c-53db223652ac
-HTML(render_svg(graph, states[step]))
+HTML(render_svg(graph, states[step]; responsive = true))
 
 # ╔═╡ Cell order:
 # ╠═8cbb9e65-f693-4328-bf2e-b3f870e5369e

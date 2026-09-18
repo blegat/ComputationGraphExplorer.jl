@@ -13,8 +13,7 @@ end
 CGE.metadata(::Type{ScalarReverseData}, ::Float64) = ScalarReverseData(0.0)
 
 function CGE.metadata_rows(data::ScalarReverseData)
-    value = iszero(data.derivative) ? "0" : string(data.derivative)
-    return ["adjoint" => value]
+    return ["adjoint" => data.derivative]
 end
 
 const ScalarNode = CGE.Node{Float64,ScalarReverseData}

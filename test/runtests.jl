@@ -135,7 +135,7 @@ end
     @test Base.broadcasted(min, a, 2).value == min.(a.value, 2)
     @test Base.broadcasted(max, 2, a).value == max.(2, a.value)
 
-    @test CGE.metadata_rows(EmptyMetadata()) == Pair{String,String}[]
+    @test isempty(CGE.metadata_rows(EmptyMetadata()))
     @test occursin("seeded = false", sprint(show, x))
     large_matrix = fill(1.0, 5, 5)
     array3 = reshape(1:8, 2, 2, 2)
@@ -238,6 +238,14 @@ include(joinpath(@__DIR__, "..", "examples", "scalar_reverse.jl"))
 using .ScalarReverseExample
 
 @testset "scalar reverse example" begin
+    compact_node = ScalarReverseExample.ScalarNode(1 / 3)
+    compact_node.metadata.derivative = 1 / 3
+    compact = sprint(show, 1 / 3; context = :compact => true)
+    @test occursin("value = $compact, adjoint = $compact", sprint(show, compact_node))
+    compact_graph = CGE.Graph(compact_node)
+    compact_frame = CGE.capture_frame(compact_graph, "Compact metadata")
+    @test compact_frame.metadata[compact_node] == ["adjoint" => CGE._fmt(1 / 3)]
+
     graph = ScalarReverseExample.example()
     order = CGE.topological_order(graph.output)
     CGE.backward!(graph.output, order)

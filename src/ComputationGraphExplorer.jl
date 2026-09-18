@@ -18,8 +18,14 @@ metadata(::Type{M}, value) where {M} = M(value)
 """Convert an operand to the value type shared by an expression graph."""
 convert_value(::Type{T}, value) where {T} = convert(T, value)
 
-"""Rows displayed below a node by the generic visualizer."""
-metadata_rows(::Any) = Pair{String,String}[]
+"""
+    metadata_rows(metadata)
+
+Return `label => value` rows displayed below a node. Return raw values when
+possible so text and graphical displays can apply their compact formatting;
+preformatted strings are also supported.
+"""
+metadata_rows(::Any) = Pair{String,Any}[]
 
 mutable struct Node{T,M}
     op::Union{Nothing,Symbol}

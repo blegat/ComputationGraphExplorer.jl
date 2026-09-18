@@ -24,7 +24,8 @@ begin
 end
 
 # ╔═╡ e1084400-e25c-4f9f-bdd7-c919cdf50ad8
-using PlutoUI, ComputationGraphExplorer, PlutoTeachingTools
+using PlutoUI, PlutoTeachingTools
+import ComputationGraphExplorer as CGE
 
 # ╔═╡ 6956a53c-58f2-4ee1-b9a5-c74678752eb5
 include("scalar_reverse.jl")
@@ -58,7 +59,7 @@ end
 @bind step Slider(eachindex(states); default = 1, show_value = true)
 
 # ╔═╡ 5b273195-e5f2-4e82-846c-53db223652ac
-HTML(render_svg(graph, states[step]; responsive = true))
+HTML(CGE.render_svg(graph, states[step]; responsive = true))
 
 # ╔═╡ Cell order:
 # ╠═8cbb9e65-f693-4328-bf2e-b3f870e5369e

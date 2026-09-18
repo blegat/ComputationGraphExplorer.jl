@@ -27,47 +27,47 @@ julia --project=examples -e 'using Pluto; Pluto.run(notebook="examples/autodiff_
 ## Defining node metadata
 
 ```julia
-using ComputationGraphExplorer
+import ComputationGraphExplorer as CGE
 
 mutable struct MyMetadata
     note::String
 end
 MyMetadata(value) = MyMetadata("value type: $(typeof(value))")
 
-const MyNode = ExprNode{Float64,MyMetadata}
+const MyNode = CGE.Node{Float64,MyMetadata}
 x = MyNode(2.0)
 y = MyNode(3.0)
-graph = ExprGraph(x * y; names=IdDict(x => "x", y => "y"))
+graph = CGE.Graph(x * y; names=IdDict(x => "x", y => "y"))
 ```
 
 ## Defining reverse rules
 
-`ComputationGraphExplorer.pullback!(node)` translates the operation symbol stored in a
+`CGE.pullback!(node)` translates the operation symbol stored in a
 node into ordinary Julia multiple dispatch. For example, scalar reverse-mode
 metadata can define
 
 ```julia
-function ComputationGraphExplorer.pullback!(::typeof(*), output::MyNode, x::MyNode, y::MyNode)
+function CGE.pullback!(::typeof(*), output::MyNode, x::MyNode, y::MyNode)
     # Propagate output metadata to x.metadata and y.metadata.
 end
 ```
 
 The package contains the small, explicit operation switch; applications only
-provide the propagation rules. Calling `pullback!(node)` without a matching rule
+provide the propagation rules. Calling `CGE.pullback!(node)` without a matching rule
 throws a `MethodError` showing exactly which operator and node signature is
 missing. Metadata that stores a pullback or local Jacobians may instead
-specialize `ComputationGraphExplorer.pullback!(node::MyNode)` and bypass the switch.
+specialize `CGE.pullback!(node::MyNode)` and bypass the switch.
 
-A complete reverse pass is provided by `backward!(output)`. Metadata defines
+A complete reverse pass is provided by `CGE.backward!(output)`. Metadata defines
 how adjoints are initialized:
 
 ```julia
-function ComputationGraphExplorer.seed_metadata!(data::MyMetadata, is_output::Bool)
+function CGE.seed_metadata!(data::MyMetadata, is_output::Bool)
     # Initialize the metadata, using a nonzero reverse seed iff `is_output`.
 end
 ```
 
-For repeated passes, `backward!(output, topological_order(output))` accepts a
+For repeated passes, `CGE.backward!(output, CGE.topological_order(output))` accepts a
 prepared order and can be allocation-free.
 
 Rendering and SVG, PNG, and EPS export use Luxor and its Cairo artifact. Small

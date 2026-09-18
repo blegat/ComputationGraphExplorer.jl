@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Benoît Legat
 # SPDX-License-Identifier: MIT
 
-using ComputationGraphExplorer
+import ComputationGraphExplorer as CGE
 using LinearAlgebra
 using Test
 
@@ -14,23 +14,23 @@ mutable struct DispatchMetadata
 end
 DispatchMetadata(::Any) = DispatchMetadata(false, Any[])
 
-const DispatchNode = ExprNode{Any,DispatchMetadata}
+const DispatchNode = CGE.Node{Any,DispatchMetadata}
 
-ComputationGraphExplorer.metadata_rows(data::DispatchMetadata) =
+CGE.metadata_rows(data::DispatchMetadata) =
     ["seeded" => string(data.seeded)]
 
-function ComputationGraphExplorer.seed_metadata!(data::DispatchMetadata, is_output::Bool)
+function CGE.seed_metadata!(data::DispatchMetadata, is_output::Bool)
     data.seeded = is_output
     empty!(data.calls)
     return data
 end
 
-function ComputationGraphExplorer.pullback!(op, output::DispatchNode, ::DispatchNode...)
+function CGE.pullback!(op, output::DispatchNode, ::DispatchNode...)
     push!(output.metadata.calls, op)
     return output
 end
 
-function ComputationGraphExplorer.pullback!(
+function CGE.pullback!(
     ::typeof(Base.broadcasted),
     op,
     output::DispatchNode,
@@ -41,12 +41,12 @@ function ComputationGraphExplorer.pullback!(
 end
 
 @testset "scalar expression graph" begin
-    Node = ExprNode{Float64,EmptyMetadata}
+    Node = CGE.Node{Float64,EmptyMetadata}
     x, y = Node(2), Node(3)
     s1 = x * y
     output = s1 * (s1 + x)
     @test output.value == 48
-    @test length(topological_order(output)) == 5
+    @test length(CGE.topological_order(output)) == 5
     text = sprint(show, output)
     @test startswith(text, "Computation graph with 5 nodes:")
     @test count("[2] *: value = 6.0", text) == 1
@@ -54,7 +54,7 @@ end
     @test occursin("↩ [3]", text)
     @test !showable(MIME"image/svg+xml"(), output)
 
-    visualization = visualize(output)
+    visualization = CGE.visualize(output)
     @test sprint(show, visualization) == "Visualization of a computation graph with 5 nodes"
     @test showable(MIME"image/svg+xml"(), visualization)
     visualization_svg = repr(MIME"image/svg+xml"(), visualization)
@@ -62,25 +62,25 @@ end
     @test !occursin("width=\"100%\"", visualization_svg)
     custom_svg = repr(
         MIME"image/svg+xml"(),
-        visualize(output; width = 700, height = 400, responsive = true),
+        CGE.visualize(output; width = 700, height = 400, responsive = true),
     )
     @test occursin("width=\"100%\"", custom_svg)
     @test occursin("viewBox=\"0 0 700 400\"", custom_svg)
 
-    graph = ExprGraph(output; names = IdDict(x => "x", y => "y"))
-    states = forward_frames(graph)
+    graph = CGE.Graph(output; names = IdDict(x => "x", y => "y"))
+    states = CGE.forward_frames(graph)
     @test length(states) == 6
-    svg = render_svg(graph, states[end])
+    svg = CGE.render_svg(graph, states[end])
     @test occursin("<svg", svg)
     @test occursin("xmlns:xlink=\"http://www.w3.org/1999/xlink\"", svg)
     @test occursin("width=\"1100\" height=\"620\"", svg)
-    @test occursin("width=\"100%\"", render_svg(graph, states[end]; responsive = true))
-    @test ComputationGraphExplorer._fmt([1.0, 2.0]) == "[1, 2]"
-    @test ComputationGraphExplorer._fmt([1.0 2.0; 3.0 4.0]) == "[1 2; 3 4]"
+    @test occursin("width=\"100%\"", CGE.render_svg(graph, states[end]; responsive = true))
+    @test CGE._fmt([1.0, 2.0]) == "[1, 2]"
+    @test CGE._fmt([1.0 2.0; 3.0 4.0]) == "[1 2; 3 4]"
 
-    # Graph construction is independent of reverse-mode metadata. If no rule
+    # CGE.Graph construction is independent of reverse-mode metadata. If no rule
     # was provided for an operation, reverse dispatch reports its exact method.
-    @test_throws MethodError ComputationGraphExplorer.pullback!(x + y)
+    @test_throws MethodError CGE.pullback!(x + y)
 end
 
 @testset "operators and array interface" begin
@@ -136,12 +136,12 @@ end
     @test Base.broadcasted(min, a, 2).value == min.(a.value, 2)
     @test Base.broadcasted(max, 2, a).value == max.(2, a.value)
 
-    @test metadata_rows(EmptyMetadata()) == Pair{String,String}[]
+    @test CGE.metadata_rows(EmptyMetadata()) == Pair{String,String}[]
     @test occursin("seeded = false", sprint(show, x))
     large_matrix = fill(1.0, 5, 5)
     array3 = reshape(1:8, 2, 2, 2)
-    @test ComputationGraphExplorer._fmt(large_matrix) == summary(large_matrix)
-    @test ComputationGraphExplorer._fmt(array3) == summary(array3)
+    @test CGE._fmt(large_matrix) == summary(large_matrix)
+    @test CGE._fmt(array3) == summary(array3)
 end
 
 @testset "pullback dispatch" begin
@@ -180,22 +180,22 @@ end
     )
 
     for (node, expected) in nodes
-        pullback!(node)
+        CGE.pullback!(node)
         @test only(node.metadata.calls) == expected
     end
 
     output = x * y
-    backward!(output)
+    CGE.backward!(output)
     @test output.metadata.seeded
     @test !x.metadata.seeded
     @test !y.metadata.seeded
     @test only(output.metadata.calls) == *
-    @test pullback!(x) === x
+    @test CGE.pullback!(x) === x
 end
 
 @testset "small array value union" begin
     Value = Union{Float64,Vector{Float64},Matrix{Float64},Adjoint{Float64,Matrix{Float64}}}
-    Node = ExprNode{Value,EmptyMetadata}
+    Node = CGE.Node{Value,EmptyMetadata}
     x = Node(reshape(collect(1.0:6.0), 2, 3))
     w = Node(reshape(collect(1.0:6.0), 3, 2))
     product = x * w
@@ -209,26 +209,26 @@ end
     x = DispatchNode([1.0, 2.0])
     y = DispatchNode([3.0, 4.0])
     output = reduce(hcat, [x, y])
-    graph = ExprGraph(output; names = IdDict(x => "x", y => "y", output => "A"))
-    frame = capture_frame(graph, "Array graph"; active = output)
+    graph = CGE.Graph(output; names = IdDict(x => "x", y => "y", output => "A"))
+    frame = CGE.capture_frame(graph, "Array graph"; active = output)
 
-    svg = render_svg(graph, frame; exam = true)
+    svg = CGE.render_svg(graph, frame; exam = true)
     @test occursin("viewBox=\"0 0 1100 260\"", svg)
     @test all(!isempty, values(frame.metadata))
-    @test render_svg(graph, frame; responsive = false) isa String
-    no_metadata = capture_frame(graph, "No metadata"; show_metadata = false)
+    @test CGE.render_svg(graph, frame; responsive = false) isa String
+    no_metadata = CGE.capture_frame(graph, "No metadata"; show_metadata = false)
     @test all(isempty, values(no_metadata.metadata))
-    @test render_svg(graph, no_metadata) isa String
+    @test CGE.render_svg(graph, no_metadata) isa String
 
     mktempdir() do directory
         svg_path = joinpath(directory, "graph.svg")
         responsive_path = joinpath(directory, "responsive.svg")
         png_path = joinpath(directory, "graph.png")
         eps_path = joinpath(directory, "graph.eps")
-        @test save_svg(svg_path, graph, frame) == svg_path
-        @test save_svg(responsive_path, graph, frame; responsive = true) == responsive_path
-        @test save_png(png_path, graph, frame; density = 72, width = 550) == png_path
-        @test save_eps(eps_path, graph, frame) == eps_path
+        @test CGE.save_svg(svg_path, graph, frame) == svg_path
+        @test CGE.save_svg(responsive_path, graph, frame; responsive = true) == responsive_path
+        @test CGE.save_png(png_path, graph, frame; density = 72, width = 550) == png_path
+        @test CGE.save_eps(eps_path, graph, frame) == eps_path
         @test all(isfile, (svg_path, responsive_path, png_path, eps_path))
         @test occursin("width=\"100%\"", read(responsive_path, String))
     end
@@ -239,8 +239,8 @@ using .ScalarReverseExample
 
 @testset "scalar reverse example" begin
     graph = ScalarReverseExample.example()
-    order = topological_order(graph.output)
-    ScalarReverseExample.backward!(graph.output, order)
+    order = CGE.topological_order(graph.output)
+    CGE.backward!(graph.output, order)
     derivatives =
         Dict(graph.names[node] => node.metadata.derivative for node in keys(graph.names))
     @test derivatives["x"] == 48
@@ -251,6 +251,6 @@ using .ScalarReverseExample
     # Compilation and topology discovery are deliberately outside the
     # measurement; repeated reverse sweeps over a recorded graph must allocate
     # no memory.
-    ScalarReverseExample.backward!(graph.output, order)
-    @test @allocated(ScalarReverseExample.backward!(graph.output, order)) == 0
+    CGE.backward!(graph.output, order)
+    @test @allocated(CGE.backward!(graph.output, order)) == 0
 end

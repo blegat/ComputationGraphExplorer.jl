@@ -16,8 +16,7 @@ DispatchMetadata(::Any) = DispatchMetadata(false, Any[])
 
 const DispatchNode = CGE.Node{Any,DispatchMetadata}
 
-CGE.metadata_rows(data::DispatchMetadata) =
-    ["seeded" => string(data.seeded)]
+CGE.metadata_rows(data::DispatchMetadata) = ["seeded" => string(data.seeded)]
 
 function CGE.seed_metadata!(data::DispatchMetadata, is_output::Bool)
     data.seeded = is_output
@@ -226,7 +225,8 @@ end
         png_path = joinpath(directory, "graph.png")
         eps_path = joinpath(directory, "graph.eps")
         @test CGE.save_svg(svg_path, graph, frame) == svg_path
-        @test CGE.save_svg(responsive_path, graph, frame; responsive = true) == responsive_path
+        @test CGE.save_svg(responsive_path, graph, frame; responsive = true) ==
+              responsive_path
         @test CGE.save_png(png_path, graph, frame; density = 72, width = 550) == png_path
         @test CGE.save_eps(eps_path, graph, frame) == eps_path
         @test all(isfile, (svg_path, responsive_path, png_path, eps_path))

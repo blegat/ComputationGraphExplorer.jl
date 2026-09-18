@@ -117,13 +117,7 @@ function _draw_array_value(value, point)
     )
 end
 
-function _draw_graph(
-    graph::Graph,
-    frame::Frame;
-    width = 1100,
-    height = 620,
-    exam = false,
-)
+function _draw_graph(graph::Graph, frame::Frame; width = 1100, height = 620, exam = false)
     order = topological_order(graph.output)
     positions, depth =
         _positions(order; width, height = exam ? height : height - 60, compact = exam)

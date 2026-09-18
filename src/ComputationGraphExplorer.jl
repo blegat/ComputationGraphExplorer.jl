@@ -284,10 +284,7 @@ struct Graph{T,M}
     names::IdDict{Node{T,M},String}
 end
 
-function Graph(
-    output::Node{T,M};
-    names = IdDict{Node{T,M},String}(),
-) where {T,M}
+function Graph(output::Node{T,M}; names = IdDict{Node{T,M},String}()) where {T,M}
     order = topological_order(output)
     generated = IdDict{Node{T,M},String}()
     for (index, node) in enumerate(order)

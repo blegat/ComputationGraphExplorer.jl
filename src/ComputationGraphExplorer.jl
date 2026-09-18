@@ -43,7 +43,6 @@ function Node{T,M}(op::Symbol, args::Vector{Node{T,M}}, value) where {T,M}
     return Node{T,M}(op, args, converted, metadata(M, converted))
 end
 
-_constant(x::Node, ::Type{<:Node}) = x
 _constant(x, ::Type{N}) where {N<:Node} = N(x)
 
 function _binary(op::Symbol, f, x::N, y) where {N<:Node}

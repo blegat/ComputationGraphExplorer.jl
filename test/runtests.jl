@@ -55,8 +55,7 @@ end
     @test !showable(MIME"image/svg+xml"(), output)
 
     visualization = visualize(output)
-    @test sprint(show, visualization) ==
-          "Visualization of a computation graph with 5 nodes"
+    @test sprint(show, visualization) == "Visualization of a computation graph with 5 nodes"
     @test showable(MIME"image/svg+xml"(), visualization)
     visualization_svg = repr(MIME"image/svg+xml"(), visualization)
     @test occursin("width=\"1100\" height=\"620\"", visualization_svg)
@@ -75,10 +74,7 @@ end
     @test occursin("<svg", svg)
     @test occursin("xmlns:xlink=\"http://www.w3.org/1999/xlink\"", svg)
     @test occursin("width=\"1100\" height=\"620\"", svg)
-    @test occursin(
-        "width=\"100%\"",
-        render_svg(graph, states[end]; responsive = true),
-    )
+    @test occursin("width=\"100%\"", render_svg(graph, states[end]; responsive = true))
     @test ComputationGraphExplorer._fmt([1.0, 2.0]) == "[1, 2]"
     @test ComputationGraphExplorer._fmt([1.0 2.0; 3.0 4.0]) == "[1 2; 3 4]"
 

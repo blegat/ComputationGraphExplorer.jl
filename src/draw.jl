@@ -15,8 +15,11 @@ function capture_frame(
     values = IdDict(node => node in visible for node in topological_order(graph.output))
     rows = IdDict{Node{T,M},Vector{Pair{String,String}}}()
     for node in topological_order(graph.output)
-        rows[node] =
-            show_metadata ? copy(metadata_rows(node.metadata)) : Pair{String,String}[]
+        rows[node] = if show_metadata
+            [label => _metadata_text(value) for (label, value) in metadata_rows(node.metadata)]
+        else
+            Pair{String,String}[]
+        end
     end
     return Frame{T,M}(String(title), active, values, rows)
 end
@@ -50,6 +53,9 @@ function _fmt(x::AbstractMatrix)
     return "[" * join(rows, "; ") * "]"
 end
 _fmt(x) = string(summary(x))
+
+_metadata_text(value::AbstractString) = String(value)
+_metadata_text(value) = _fmt(value)
 
 const _typst_preamble = Typstry.TypstString(
     Typstry.TypstText(
@@ -307,7 +313,12 @@ function _show_node(io::IO, node::Node, seen, prefix, is_last)
     compact_io = IOContext(io, :compact => true, :limit => true)
     show(compact_io, node.value)
     for (label, value) in metadata_rows(node.metadata)
-        print(io, ", ", label, " = ", value)
+        print(io, ", ", label, " = ")
+        if value isa AbstractString
+            print(io, value)
+        else
+            show(compact_io, value)
+        end
     end
 
     child_prefix = prefix * (is_last ? "   " : "│  ")

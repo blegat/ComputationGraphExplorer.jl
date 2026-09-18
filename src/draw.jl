@@ -25,7 +25,7 @@ function forward_frames(graph::ExprGraph)
     order = topological_order(graph.output)
     result = Frame[]
     visible = Set{eltype(order)}()
-    push!(result, capture_frame(graph, "Expression graph"; visible, show_metadata = false))
+    push!(result, capture_frame(graph, "Computation graph"; visible, show_metadata = false))
     for node in order
         push!(visible, node)
         push!(
@@ -230,13 +230,36 @@ function _render(
     return drawing
 end
 
+"""
+    render_svg(
+        graph,
+        frame;
+        width = 1100,
+        height = nothing,
+        exam = false,
+        responsive = false,
+    )
+
+Render `frame` of `graph` as an SVG string.
+
+By default, the root SVG has the fixed intrinsic dimensions given by `width` and
+`height`. This works well when the SVG is displayed as an image, notably in the
+VS Code plot pane.
+
+With `responsive = true`, the root instead has `width="100%"` and a `viewBox`, so
+the complete graph scales with the width of its containing element. This is
+useful when inserting the SVG inline into a responsive HTML container, as in
+Pluto with `HTML(render_svg(graph, frame; responsive = true))`. It is less
+suitable when a frontend embeds the SVG as an image and needs intrinsic
+dimensions, as VS Code may then initially display it at a small fallback size.
+"""
 function render_svg(
     graph::ExprGraph,
     frame::Frame;
     width = 1100,
     height = nothing,
     exam = false,
-    responsive = true,
+    responsive = false,
 )
     height = isnothing(height) ? _default_height(graph, exam) : height
     _render(graph, frame, :svg; width, height, exam)
@@ -275,4 +298,62 @@ end
 function save_eps(path, graph::ExprGraph, frame::Frame; kwargs...)
     _render(graph, frame, :eps; path, kwargs...)
     return path
+end
+
+function _show_node(io::IO, node::ExprNode, seen, prefix, is_last)
+    print(io, prefix, is_last ? "└─ " : "├─ ")
+    if haskey(seen, node)
+        return print(io, "↩ [", seen[node], "]")
+    end
+
+    identifier = length(seen) + 1
+    seen[node] = identifier
+    operation = isnothing(node.op) ? "input" : string(node.op)
+    print(io, '[', identifier, "] ", operation, ": value = ")
+    compact_io = IOContext(io, :compact => true, :limit => true)
+    show(compact_io, node.value)
+    for (label, value) in metadata_rows(node.metadata)
+        print(io, ", ", label, " = ", value)
+    end
+
+    child_prefix = prefix * (is_last ? "   " : "│  ")
+    for (index, child) in enumerate(node.args)
+        println(io)
+        _show_node(io, child, seen, child_prefix, index == length(node.args))
+    end
+    return
+end
+
+function Base.show(io::IO, node::ExprNode)
+    order = topological_order(node)
+    count = length(order)
+    print(io, "Computation graph with $count node", count == 1 ? "" : "s", ':')
+    println(io)
+    return _show_node(io, node, IdDict{typeof(node),Int}(), get(io, :offset, ""), true)
+end
+
+struct GraphVisualization{N<:ExprNode,K<:NamedTuple}
+    output::N
+    kwargs::K
+end
+
+"""
+    visualize(node; kwargs...)
+
+Wrap a computation graph for graphical display in environments such as VS Code.
+All keyword arguments are forwarded to [`render_svg`](@ref).
+"""
+function visualize(node::ExprNode; kwargs...)
+    return GraphVisualization(node, (; kwargs...))
+end
+
+function Base.show(io::IO, visualization::GraphVisualization)
+    count = length(topological_order(visualization.output))
+    return print(io, "Visualization of a computation graph with $count nodes")
+end
+
+function Base.show(io::IO, ::MIME"image/svg+xml", visualization::GraphVisualization)
+    graph = ExprGraph(visualization.output)
+    frame = capture_frame(graph, "Expression graph")
+    return print(io, render_svg(graph, frame; visualization.kwargs...))
 end

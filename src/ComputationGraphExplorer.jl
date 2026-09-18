@@ -7,24 +7,6 @@ import LinearAlgebra
 import Luxor
 import Typstry
 
-export ExprNode,
-    ExprGraph,
-    Frame,
-    metadata,
-    convert_value,
-    metadata_rows,
-    backward!,
-    pullback!,
-    seed_metadata!,
-    topological_order,
-    forward_frames,
-    capture_frame,
-    visualize,
-    render_svg,
-    save_svg,
-    save_png,
-    save_eps
-
 """
     metadata(::Type{M}, value)
 
@@ -39,9 +21,9 @@ convert_value(::Type{T}, value) where {T} = convert(T, value)
 """Rows displayed below a node by the generic visualizer."""
 metadata_rows(::Any) = Pair{String,String}[]
 
-mutable struct ExprNode{T,M}
+mutable struct Node{T,M}
     op::Union{Nothing,Symbol}
-    args::Vector{ExprNode{T,M}}
+    args::Vector{Node{T,M}}
     value::T
     metadata::M
 end
@@ -51,93 +33,92 @@ function _value(::Type{T}, value) where {T}
     return convert_value(T, value)
 end
 
-function ExprNode{T,M}(value) where {T,M}
+function Node{T,M}(value) where {T,M}
     converted = _value(T, value)
-    return ExprNode{T,M}(nothing, ExprNode{T,M}[], converted, metadata(M, converted))
+    return Node{T,M}(nothing, Node{T,M}[], converted, metadata(M, converted))
 end
 
-function ExprNode{T,M}(op::Symbol, args::Vector{ExprNode{T,M}}, value) where {T,M}
+function Node{T,M}(op::Symbol, args::Vector{Node{T,M}}, value) where {T,M}
     converted = _value(T, value)
-    return ExprNode{T,M}(op, args, converted, metadata(M, converted))
+    return Node{T,M}(op, args, converted, metadata(M, converted))
 end
 
-_constant(x::ExprNode, ::Type{<:ExprNode}) = x
-_constant(x, ::Type{N}) where {N<:ExprNode} = N(x)
+_constant(x, ::Type{N}) where {N<:Node} = N(x)
 
-function _binary(op::Symbol, f, x::N, y) where {N<:ExprNode}
+function _binary(op::Symbol, f, x::N, y) where {N<:Node}
     ynode = _constant(y, N)
     return N(op, N[x, ynode], f(x.value, ynode.value))
 end
 
-function _binary(op::Symbol, f, x, y::N) where {N<:ExprNode}
+function _binary(op::Symbol, f, x, y::N) where {N<:Node}
     xnode = _constant(x, N)
     return N(op, N[xnode, y], f(xnode.value, y.value))
 end
 
-function _binary(op::Symbol, f, x::N, y::N) where {N<:ExprNode}
+function _binary(op::Symbol, f, x::N, y::N) where {N<:Node}
     return N(op, N[x, y], f(x.value, y.value))
 end
 
-function _unary(op::Symbol, f, x::N) where {N<:ExprNode}
+function _unary(op::Symbol, f, x::N) where {N<:Node}
     return N(op, N[x], f(x.value))
 end
 
-Base.:+(x::ExprNode, y) = _binary(:+, +, x, y)
-Base.:+(x, y::ExprNode) = _binary(:+, +, x, y)
-Base.:+(x::ExprNode, y::ExprNode) = _binary(:+, +, x, y)
-Base.:-(x::ExprNode, y) = _binary(:-, -, x, y)
-Base.:-(x, y::ExprNode) = _binary(:-, -, x, y)
-Base.:-(x::ExprNode, y::ExprNode) = _binary(:-, -, x, y)
-Base.:-(x::ExprNode) = _unary(:-, -, x)
-Base.:*(x::ExprNode, y) = _binary(:*, *, x, y)
-Base.:*(x, y::ExprNode) = _binary(:*, *, x, y)
-Base.:*(x::ExprNode, y::ExprNode) = _binary(:*, *, x, y)
-Base.:/(x::ExprNode, y) = _binary(:/, /, x, y)
-Base.:/(x, y::ExprNode) = _binary(:/, /, x, y)
-Base.:/(x::ExprNode, y::ExprNode) = _binary(:/, /, x, y)
-Base.:^(x::ExprNode, y) = _binary(:^, ^, x, Float64(y))
-Base.:^(x, y::ExprNode) = _binary(:^, ^, Float64(x), y)
-Base.:^(x::ExprNode, y::ExprNode) = _binary(:^, ^, x, y)
+Base.:+(x::Node, y) = _binary(:+, +, x, y)
+Base.:+(x, y::Node) = _binary(:+, +, x, y)
+Base.:+(x::Node, y::Node) = _binary(:+, +, x, y)
+Base.:-(x::Node, y) = _binary(:-, -, x, y)
+Base.:-(x, y::Node) = _binary(:-, -, x, y)
+Base.:-(x::Node, y::Node) = _binary(:-, -, x, y)
+Base.:-(x::Node) = _unary(:-, -, x)
+Base.:*(x::Node, y) = _binary(:*, *, x, y)
+Base.:*(x, y::Node) = _binary(:*, *, x, y)
+Base.:*(x::Node, y::Node) = _binary(:*, *, x, y)
+Base.:/(x::Node, y) = _binary(:/, /, x, y)
+Base.:/(x, y::Node) = _binary(:/, /, x, y)
+Base.:/(x::Node, y::Node) = _binary(:/, /, x, y)
+Base.:^(x::Node, y) = _binary(:^, ^, x, Float64(y))
+Base.:^(x, y::Node) = _binary(:^, ^, Float64(x), y)
+Base.:^(x::Node, y::Node) = _binary(:^, ^, x, y)
 
 for f in (:tanh, :exp, :log, :sqrt)
-    @eval Base.$f(x::ExprNode) = _unary($(QuoteNode(f)), Base.$f, x)
+    @eval Base.$f(x::Node) = _unary($(QuoteNode(f)), Base.$f, x)
 end
 
 _broadcast_symbol(op) = Symbol("broadcast_", nameof(op))
-function Base.broadcasted(op::Function, x::N) where {N<:ExprNode}
+function Base.broadcasted(op::Function, x::N) where {N<:Node}
     return _unary(_broadcast_symbol(op), value -> op.(value), x)
 end
-function Base.broadcasted(op::Function, x::N, y) where {N<:ExprNode}
+function Base.broadcasted(op::Function, x::N, y) where {N<:Node}
     return _binary(_broadcast_symbol(op), (a, b) -> op.(a, b), x, y)
 end
-function Base.broadcasted(op::Function, x, y::N) where {N<:ExprNode}
+function Base.broadcasted(op::Function, x, y::N) where {N<:Node}
     return _binary(_broadcast_symbol(op), (a, b) -> op.(a, b), x, y)
 end
-function Base.broadcasted(op::Function, x::N, y::N) where {N<:ExprNode}
+function Base.broadcasted(op::Function, x::N, y::N) where {N<:Node}
     return _binary(_broadcast_symbol(op), (a, b) -> op.(a, b), x, y)
 end
 function Base.broadcasted(
     ::typeof(Base.literal_pow),
     ::typeof(^),
-    x::ExprNode,
+    x::Node,
     ::Val{power},
 ) where {power}
     return Base.broadcasted(^, x, Float64(power))
 end
-Base.materialize(x::ExprNode) = x
-Base.copy(x::ExprNode) = x
+Base.materialize(x::Node) = x
+Base.copy(x::Node) = x
 
-Base.zero(x::N) where {N<:ExprNode} = N(zero(x.value))
-Base.length(x::ExprNode) = length(x.value)
-Base.size(x::ExprNode) = size(x.value)
-Base.size(x::ExprNode, dim) = size(x.value, dim)
-Base.ndims(x::ExprNode) = ndims(x.value)
-Base.eltype(x::ExprNode) = eltype(x.value)
-Base.isless(x::ExprNode, y) = isless(x.value, y isa ExprNode ? y.value : y)
-Base.isless(x, y::ExprNode) = isless(x isa ExprNode ? x.value : x, y.value)
-Base.isless(x::ExprNode, y::ExprNode) = isless(x.value, y.value)
+Base.zero(x::N) where {N<:Node} = N(zero(x.value))
+Base.length(x::Node) = length(x.value)
+Base.size(x::Node) = size(x.value)
+Base.size(x::Node, dim) = size(x.value, dim)
+Base.ndims(x::Node) = ndims(x.value)
+Base.eltype(x::Node) = eltype(x.value)
+Base.isless(x::Node, y) = isless(x.value, y isa Node ? y.value : y)
+Base.isless(x, y::Node) = isless(x isa Node ? x.value : x, y.value)
+Base.isless(x::Node, y::Node) = isless(x.value, y.value)
 
-function Base.sum(x::N; dims = :) where {N<:ExprNode}
+function Base.sum(x::N; dims = :) where {N<:Node}
     if dims === Colon()
         return N(:sum, N[x], sum(x.value))
     end
@@ -145,7 +126,7 @@ function Base.sum(x::N; dims = :) where {N<:ExprNode}
     return N(:sum_dims, N[x, dim], sum(x.value; dims = Int(dim.value)))
 end
 
-function Base.maximum(x::N; dims = :) where {N<:ExprNode}
+function Base.maximum(x::N; dims = :) where {N<:Node}
     if dims === Colon()
         return N(:maximum, N[x], maximum(x.value))
     end
@@ -153,20 +134,20 @@ function Base.maximum(x::N; dims = :) where {N<:ExprNode}
     return N(:maximum_dims, N[x, dim], maximum(x.value; dims = Int(dim.value)))
 end
 
-function LinearAlgebra.adjoint(x::N) where {N<:ExprNode}
+function LinearAlgebra.adjoint(x::N) where {N<:Node}
     return N(:adjoint, N[x], adjoint(x.value))
 end
 
-function Base.getindex(x::N, rows::AbstractVector{<:Integer}, ::Colon) where {N<:ExprNode}
+function Base.getindex(x::N, rows::AbstractVector{<:Integer}, ::Colon) where {N<:Node}
     rownode = N(Float64.(rows))
     return N(:getindex_rows, N[x, rownode], x.value[rows, :])
 end
 
-function Base.reduce(::typeof(hcat), nodes::AbstractVector{N}) where {N<:ExprNode}
+function Base.reduce(::typeof(hcat), nodes::AbstractVector{N}) where {N<:Node}
     return N(:hcat, collect(nodes), reduce(hcat, (node.value for node in nodes)))
 end
 
-function topological_order(output::N) where {N<:ExprNode}
+function topological_order(output::N) where {N<:Node}
     visited = Set{N}()
     order = N[]
     function visit(node)
@@ -180,7 +161,7 @@ function topological_order(output::N) where {N<:ExprNode}
 end
 
 """
-    pullback!(node::ExprNode)
+    pullback!(node::Node)
 
 Dispatch one node of a reverse pass to an operation-specific method such as
 `pullback!(::typeof(+), output, x, y)`. Packages attaching derivative metadata
@@ -191,7 +172,7 @@ Specialized metadata may overload this node-level method to bypass operation
 dispatch, for example when local Jacobians were stored during the forward
 pass.
 """
-function pullback!(node::ExprNode)
+function pullback!(node::Node)
     isnothing(node.op) && return node
     if node.op == :+
         if length(node.args) == 1
@@ -278,14 +259,14 @@ end
 function seed_metadata! end
 
 """
-    backward!(output::ExprNode[, order])
+    backward!(output::Node[, order])
 
 Run a complete backward pass. Metadata types implement
 `seed_metadata!(metadata, is_output)`, while operation-specific propagation is
 provided through `pullback!` methods. Passing a precomputed topological order
 makes the pass allocation-free when those methods are allocation-free.
 """
-function backward!(output::ExprNode, order)
+function backward!(output::Node, order)
     for node in order
         seed_metadata!(node.metadata, node === output)
     end
@@ -295,23 +276,20 @@ function backward!(output::ExprNode, order)
     return output
 end
 
-backward!(output::ExprNode) = backward!(output, topological_order(output))
+backward!(output::Node) = backward!(output, topological_order(output))
 
-struct ExprGraph{T,M}
-    output::ExprNode{T,M}
-    names::IdDict{ExprNode{T,M},String}
+struct Graph{T,M}
+    output::Node{T,M}
+    names::IdDict{Node{T,M},String}
 end
 
-function ExprGraph(
-    output::ExprNode{T,M};
-    names = IdDict{ExprNode{T,M},String}(),
-) where {T,M}
+function Graph(output::Node{T,M}; names = IdDict{Node{T,M},String}()) where {T,M}
     order = topological_order(output)
-    generated = IdDict{ExprNode{T,M},String}()
+    generated = IdDict{Node{T,M},String}()
     for (index, node) in enumerate(order)
         generated[node] = get(names, node, "s$(index)")
     end
-    return ExprGraph{T,M}(output, generated)
+    return Graph{T,M}(output, generated)
 end
 
 include("draw.jl")

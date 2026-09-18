@@ -1,19 +1,19 @@
 struct Frame{T,M}
     title::String
-    active::Union{Nothing,ExprNode{T,M}}
-    values::IdDict{ExprNode{T,M},Bool}
-    metadata::IdDict{ExprNode{T,M},Vector{Pair{String,String}}}
+    active::Union{Nothing,Node{T,M}}
+    values::IdDict{Node{T,M},Bool}
+    metadata::IdDict{Node{T,M},Vector{Pair{String,String}}}
 end
 
 function capture_frame(
-    graph::ExprGraph{T,M},
+    graph::Graph{T,M},
     title::AbstractString;
     active = nothing,
     visible = Set(topological_order(graph.output)),
     show_metadata = true,
 ) where {T,M}
     values = IdDict(node => node in visible for node in topological_order(graph.output))
-    rows = IdDict{ExprNode{T,M},Vector{Pair{String,String}}}()
+    rows = IdDict{Node{T,M},Vector{Pair{String,String}}}()
     for node in topological_order(graph.output)
         rows[node] =
             show_metadata ? copy(metadata_rows(node.metadata)) : Pair{String,String}[]
@@ -21,7 +21,7 @@ function capture_frame(
     return Frame{T,M}(String(title), active, values, rows)
 end
 
-function forward_frames(graph::ExprGraph)
+function forward_frames(graph::Graph)
     order = topological_order(graph.output)
     result = Frame[]
     visible = Set{eltype(order)}()
@@ -117,13 +117,7 @@ function _draw_array_value(value, point)
     )
 end
 
-function _draw_graph(
-    graph::ExprGraph,
-    frame::Frame;
-    width = 1100,
-    height = 620,
-    exam = false,
-)
+function _draw_graph(graph::Graph, frame::Frame; width = 1100, height = 620, exam = false)
     order = topological_order(graph.output)
     positions, depth =
         _positions(order; width, height = exam ? height : height - 60, compact = exam)
@@ -254,7 +248,7 @@ suitable when a frontend embeds the SVG as an image and needs intrinsic
 dimensions, as VS Code may then initially display it at a small fallback size.
 """
 function render_svg(
-    graph::ExprGraph,
+    graph::Graph,
     frame::Frame;
     width = 1100,
     height = nothing,
@@ -271,7 +265,7 @@ function render_svg(
     return svg
 end
 
-function save_svg(path, graph::ExprGraph, frame::Frame; responsive = false, kwargs...)
+function save_svg(path, graph::Graph, frame::Frame; responsive = false, kwargs...)
     if responsive
         write(path, render_svg(graph, frame; responsive, kwargs...))
     else
@@ -282,7 +276,7 @@ end
 
 function save_png(
     path,
-    graph::ExprGraph,
+    graph::Graph,
     frame::Frame;
     density = 180,
     width = 1600,
@@ -295,12 +289,12 @@ function save_png(
     return path
 end
 
-function save_eps(path, graph::ExprGraph, frame::Frame; kwargs...)
+function save_eps(path, graph::Graph, frame::Frame; kwargs...)
     _render(graph, frame, :eps; path, kwargs...)
     return path
 end
 
-function _show_node(io::IO, node::ExprNode, seen, prefix, is_last)
+function _show_node(io::IO, node::Node, seen, prefix, is_last)
     print(io, prefix, is_last ? "└─ " : "├─ ")
     if haskey(seen, node)
         return print(io, "↩ [", seen[node], "]")
@@ -324,7 +318,7 @@ function _show_node(io::IO, node::ExprNode, seen, prefix, is_last)
     return
 end
 
-function Base.show(io::IO, node::ExprNode)
+function Base.show(io::IO, node::Node)
     order = topological_order(node)
     count = length(order)
     print(io, "Computation graph with $count node", count == 1 ? "" : "s", ':')
@@ -332,7 +326,7 @@ function Base.show(io::IO, node::ExprNode)
     return _show_node(io, node, IdDict{typeof(node),Int}(), get(io, :offset, ""), true)
 end
 
-struct GraphVisualization{N<:ExprNode,K<:NamedTuple}
+struct GraphVisualization{N<:Node,K<:NamedTuple}
     output::N
     kwargs::K
 end
@@ -343,7 +337,7 @@ end
 Wrap a computation graph for graphical display in environments such as VS Code.
 All keyword arguments are forwarded to [`render_svg`](@ref).
 """
-function visualize(node::ExprNode; kwargs...)
+function visualize(node::Node; kwargs...)
     return GraphVisualization(node, (; kwargs...))
 end
 
@@ -353,7 +347,7 @@ function Base.show(io::IO, visualization::GraphVisualization)
 end
 
 function Base.show(io::IO, ::MIME"image/svg+xml", visualization::GraphVisualization)
-    graph = ExprGraph(visualization.output)
+    graph = Graph(visualization.output)
     frame = capture_frame(graph, "Expression graph")
     return print(io, render_svg(graph, frame; visualization.kwargs...))
 end

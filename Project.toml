@@ -1,6 +1,6 @@
 name = "ComputationGraphExplorer"
 uuid = "c9fc7d07-15e8-4fd8-b152-23c2424d2de2"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Benoît Legat <benoit.legat@gmail.com>"]
 
 [deps]

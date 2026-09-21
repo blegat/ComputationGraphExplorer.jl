@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 import ComputationGraphExplorer as CGE
+import NNlib
 using LinearAlgebra
 using Test
 
@@ -190,6 +191,30 @@ end
     @test !y.metadata.seeded
     @test only(output.metadata.calls) == *
     @test CGE.pullback!(x) === x
+end
+
+@testset "NNlib extension" begin
+    left_value = reshape(collect(1.0:12.0), 2, 3, 2)
+    right_value = reshape(collect(1.0:24.0), 3, 4, 2)
+    left = DispatchNode(left_value)
+    right = DispatchNode(right_value)
+
+    product = NNlib.batched_mul(left, right)
+    @test product.op == :batched_mul
+    @test product.args == DispatchNode[left, right]
+    @test product.value == NNlib.batched_mul(left_value, right_value)
+    @test NNlib.batched_mul(left, right_value).value == product.value
+    @test NNlib.batched_mul(left_value, right).value == product.value
+
+    transposed = NNlib.batched_transpose(product)
+    @test transposed.op == :batched_transpose
+    @test transposed.args == DispatchNode[product]
+    @test Array(transposed.value) == Array(NNlib.batched_transpose(product.value))
+
+    CGE.pullback!(product)
+    CGE.pullback!(transposed)
+    @test only(product.metadata.calls) == Val(:batched_mul)
+    @test only(transposed.metadata.calls) == Val(:batched_transpose)
 end
 
 @testset "small array value union" begin

@@ -8,14 +8,22 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Luxor = "ae8d54c2-7ccd-5906-9d76-62fc9837b5bc"
 Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 
+[weakdeps]
+NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
+
+[extensions]
+ComputationGraphExplorerNNlibExt = "NNlib"
+
 [compat]
 LinearAlgebra = "1.10"
 Luxor = "4.5.0"
+NNlib = "0.9"
 Typstry = "0.7.0"
 julia = "1.10"
 
 [extras]
+NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["NNlib", "Test"]

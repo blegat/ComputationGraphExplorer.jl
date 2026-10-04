@@ -6,6 +6,7 @@ module ComputationGraphExplorer
 import LinearAlgebra
 import Luxor
 import Typstry
+import UUIDs
 
 """
     metadata(::Type{M}, value)

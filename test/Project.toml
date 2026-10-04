@@ -1,0 +1,8 @@
+[deps]
+ComputationGraphExplorer = "c9fc7d07-15e8-4fd8-b152-23c2424d2de2"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+NNlib = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[sources]
+ComputationGraphExplorer = {path = ".."}

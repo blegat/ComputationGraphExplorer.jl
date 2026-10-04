@@ -6,6 +6,8 @@ import NNlib
 using LinearAlgebra
 using Test
 
+include("test_svg_ids.jl")
+
 struct EmptyMetadata end
 EmptyMetadata(::Any) = EmptyMetadata()
 

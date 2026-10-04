@@ -230,6 +230,19 @@ function _render(
     return drawing
 end
 
+# Cairo reuses glyph and clip IDs between drawings. Inline SVGs share the HTML
+# document's ID namespace, so both definitions and local references need a
+# per-render prefix (including repeated renders of the same graph).
+function _namespace_svg(svg::AbstractString)
+    prefix = "cge-$(UUIDs.uuid4())-"
+    return replace(
+        svg,
+        r"\bid=[\"']" => matched -> matched * prefix,
+        r"\bhref=[\"']#" => matched -> matched * prefix,
+        r"url\(\s*[\"']?#" => matched -> matched * prefix,
+    )
+end
+
 """
     render_svg(
         graph,
@@ -241,6 +254,9 @@ end
     )
 
 Render `frame` of `graph` as an SVG string.
+
+Each render uses unique SVG IDs so multiple graphs can safely be embedded
+inline in the same HTML document.
 
 By default, the root SVG has the fixed intrinsic dimensions given by `width` and
 `height`. This works well when the SVG is displayed as an image, notably in the
@@ -263,7 +279,7 @@ function render_svg(
 )
     height = isnothing(height) ? _default_height(graph, exam) : height
     _render(graph, frame, :svg; width, height, exam)
-    svg = Luxor.svgstring()
+    svg = _namespace_svg(Luxor.svgstring())
     if responsive
         root = "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"100%\" viewBox=\"0 0 $width $height\" preserveAspectRatio=\"xMidYMid meet\" style=\"display:block;height:auto\">"
         svg = replace(svg, r"<svg[^>]*>" => root; count = 1)
@@ -272,11 +288,7 @@ function render_svg(
 end
 
 function save_svg(path, graph::Graph, frame::Frame; responsive = false, kwargs...)
-    if responsive
-        write(path, render_svg(graph, frame; responsive, kwargs...))
-    else
-        _render(graph, frame, :svg; path, kwargs...)
-    end
+    write(path, render_svg(graph, frame; responsive, kwargs...))
     return path
 end
 

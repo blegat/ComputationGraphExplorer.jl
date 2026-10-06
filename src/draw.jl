@@ -293,13 +293,8 @@ function render_svg(
     typeset_arrays = true,
 )
     height = isnothing(height) ? _default_height(graph, exam) : height
-<<<<<<< Updated upstream
-    _render(graph, frame, :svg; width, height, exam)
-    svg = _namespace_svg(Luxor.svgstring())
-=======
     _render(graph, frame, :svg; width, height, exam, typeset_arrays)
-    svg = Luxor.svgstring()
->>>>>>> Stashed changes
+    svg = _namespace_svg(Luxor.svgstring())
     if responsive
         root = "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"100%\" viewBox=\"0 0 $width $height\" preserveAspectRatio=\"xMidYMid meet\" style=\"display:block;height:auto\">"
         svg = replace(svg, r"<svg[^>]*>" => root; count = 1)

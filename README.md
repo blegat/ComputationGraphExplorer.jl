@@ -71,8 +71,10 @@ For repeated passes, `CGE.backward!(output, CGE.topological_order(output))` acce
 prepared order and can be allocation-free.
 
 Rendering and SVG, PNG, and EPS export use Luxor and its Cairo artifact. Small
-matrix values are typeset by Typstry and its Typst artifact. No separately
-installed graphics or typesetting executable is required.
+matrix values are typeset by Typstry and its Typst artifact. Pass
+`typeset_arrays = false` to `render_svg` or `visualize` to render changing arrays
+as faster plain text instead. No separately installed graphics or typesetting
+executable is required.
 
 [build-img]: https://github.com/blegat/ComputationGraphExplorer.jl/actions/workflows/ci.yml/badge.svg?branch=main
 [build-url]: https://github.com/blegat/ComputationGraphExplorer.jl/actions?query=workflow%3ACI

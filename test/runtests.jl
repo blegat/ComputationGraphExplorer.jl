@@ -238,7 +238,13 @@ end
     graph = CGE.Graph(output; names = IdDict(x => "x", y => "y", output => "A"))
     frame = CGE.capture_frame(graph, "Array graph"; active = output)
 
+    empty!(CGE._array_image_cache)
+    plain_svg = CGE.render_svg(graph, frame; typeset_arrays = false)
+    @test isempty(CGE._array_image_cache)
+    @test occursin("<svg", plain_svg)
+
     svg = CGE.render_svg(graph, frame; exam = true)
+    @test !isempty(CGE._array_image_cache)
     @test occursin("viewBox=\"0 0 1100 260\"", svg)
     @test all(!isempty, values(frame.metadata))
     @test CGE.render_svg(graph, frame; responsive = false) isa String

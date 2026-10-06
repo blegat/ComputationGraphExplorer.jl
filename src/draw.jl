@@ -123,7 +123,14 @@ function _draw_array_value(value, point)
     )
 end
 
-function _draw_graph(graph::Graph, frame::Frame; width = 1100, height = 620, exam = false)
+function _draw_graph(
+    graph::Graph,
+    frame::Frame;
+    width = 1100,
+    height = 620,
+    exam = false,
+    typeset_arrays = true,
+)
     order = topological_order(graph.output)
     positions, depth =
         _positions(order; width, height = exam ? height : height - 60, compact = exam)
@@ -169,7 +176,8 @@ function _draw_graph(graph::Graph, frame::Frame; width = 1100, height = 620, exa
             halign = :center,
             valign = :middle,
         )
-        if frame.values[node] &&
+        if typeset_arrays &&
+           frame.values[node] &&
            node.value isa Union{AbstractVector,AbstractMatrix} &&
            length(node.value) <= 16
             _draw_array_value(node.value, Luxor.Point(x, y + 13))
@@ -217,6 +225,7 @@ function _render(
     width = 1100,
     height = nothing,
     exam = false,
+    typeset_arrays = true,
     path = "",
     scale = 1.0,
 )
@@ -225,7 +234,7 @@ function _render(
     canvas_height = surface == :png ? round(Int, scale * height) : scale * height
     drawing = Luxor.Drawing(canvas_width, canvas_height, surface, path)
     Luxor.scale(scale)
-    _draw_graph(graph, frame; width, height, exam)
+    _draw_graph(graph, frame; width, height, exam, typeset_arrays)
     Luxor.finish()
     return drawing
 end
@@ -251,6 +260,7 @@ end
         height = nothing,
         exam = false,
         responsive = false,
+        typeset_arrays = true,
     )
 
 Render `frame` of `graph` as an SVG string.
@@ -268,6 +278,10 @@ useful when inserting the SVG inline into a responsive HTML container, as in
 Pluto with `HTML(render_svg(graph, frame; responsive = true))`. It is less
 suitable when a frontend embeds the SVG as an image and needs intrinsic
 dimensions, as VS Code may then initially display it at a small fallback size.
+
+By default, short array values are typeset by Typst. Set `typeset_arrays = false`
+to render them as plain text instead. Plain text is substantially faster when
+values change frequently, for example in a reactive Pluto cell.
 """
 function render_svg(
     graph::Graph,
@@ -276,10 +290,16 @@ function render_svg(
     height = nothing,
     exam = false,
     responsive = false,
+    typeset_arrays = true,
 )
     height = isnothing(height) ? _default_height(graph, exam) : height
+<<<<<<< Updated upstream
     _render(graph, frame, :svg; width, height, exam)
     svg = _namespace_svg(Luxor.svgstring())
+=======
+    _render(graph, frame, :svg; width, height, exam, typeset_arrays)
+    svg = Luxor.svgstring()
+>>>>>>> Stashed changes
     if responsive
         root = "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"100%\" viewBox=\"0 0 $width $height\" preserveAspectRatio=\"xMidYMid meet\" style=\"display:block;height:auto\">"
         svg = replace(svg, r"<svg[^>]*>" => root; count = 1)
@@ -300,10 +320,11 @@ function save_png(
     width = 1600,
     height = nothing,
     exam = false,
+    typeset_arrays = true,
 )
     height = isnothing(height) ? _default_height(graph, exam) : height
     scale = width / 1100
-    _render(graph, frame, :png; width = 1100, height, exam, path, scale)
+    _render(graph, frame, :png; width = 1100, height, exam, typeset_arrays, path, scale)
     return path
 end
 
